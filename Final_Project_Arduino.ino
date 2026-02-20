@@ -37,7 +37,6 @@ struct Robot
   int instruct;
 };
 
-
 //Initalize sensor objects
 Sensor sensorSprayer = {.pin = 2, .state = HIGH};
 Sensor sensorSqueegee = {.pin = 3, .state = HIGH};
@@ -48,11 +47,11 @@ Sensor sensorPosMax = {.pin = 6, .state = LOW};
 //Initialize motor object
 Motor motorWindow = {.pin2A = 7, .pin1A = 8, .pinEN = 9, .speed = 0, .direction = 1, .instruct = 0};
 //Const speed for motor operation
-const int MOTOR_RUN_SPEED = 200;
+const int MOTOR_RUN_SPEED = 255;
 
 //////THESE ARE FOR TESTING
 unsigned long motorMillis = 0;
-const unsigned long MOTOR_DELAY = 1000;
+const unsigned long MOTOR_DELAY = 700;
 
 unsigned long robotInstructMillis = 0;
 const unsigned long ROBOT_INSTRUCT_DELAY = 200;
@@ -63,10 +62,14 @@ Robot robotWindow = {.pinBit = {10, 11, 12, 13}, .stateBit = {LOW}, .instruct = 
 
 //Store sensor input data
 void readInputSensor();
+//Converts LOWs to HIGHs and HIGHs to LOWs
+//Used to set active sensor state output as HIGH, ad inactive sensor state output as LOW
+//because the sensor output is reversed
+int convertDigitalInput(Sensor sensorObject);
 //Send stored sensor input data to PLC
 void sendOutputDataPLC();
 //Set states of motor's outputs
-void setOutputMotor(Motor motorObject);
+void setOutputMotor();
 //Set states of robot's outputs
 void setOutputRobot();
 //Send state of motor's motion
@@ -95,23 +98,27 @@ void loop() {
 
 void readInputSensor()
 {
-  sensorSprayer.state = digitalRead(sensorSprayer.pin);
-  sensorSqueegee.state = digitalRead(sensorSqueegee.pin);
-  sensorCloth.state = digitalRead(sensorCloth.pin);
-  sensorPosMin.state = digitalRead(sensorPosMin.pin);
-  sensorPosMax.state = digitalRead(sensorPosMax.pin);
+  sensorSprayer.state = convertDigitalInput(sensorSprayer);
+  sensorSqueegee.state = convertDigitalInput(sensorSqueegee);
+  sensorCloth.state = convertDigitalInput(sensorCloth);
+  sensorPosMin.state = convertDigitalInput(sensorPosMin);
+  sensorPosMax.state = convertDigitalInput(sensorPosMax);
+}
+
+int convertDigitalInput(Sensor sensorObject)
+{
+  int state = digitalRead(sensorObject.pin) == HIGH ? LOW : HIGH;
+  return state;
 }
 
 void setOutputMotor()
 {
-  //NOTE the sensors used have normally HIGH outputs, when it senses something, it goes to LOW
-  //Both Min and Max sensors are active
-  if (sensorPosMin.state == LOW && sensorPosMax.state == LOW)
+  if (sensorPosMin.state == HIGH && sensorPosMax.state == HIGH)
   {
     motorWindow.speed = 0;
   }
   //Min sensor is active
-  else if (sensorPosMin.state == LOW)
+  else if (sensorPosMin.state == HIGH)
   {
     motorWindow.speed = MOTOR_RUN_SPEED;
     if (motorWindow.direction == -1)
@@ -122,7 +129,7 @@ void setOutputMotor()
     
   }
   //Max sensor is active
-  else if (sensorPosMax.state == LOW)
+  else if (sensorPosMax.state == HIGH)
   {
     motorWindow.speed = MOTOR_RUN_SPEED;
     if (motorWindow.direction == 1)
@@ -160,9 +167,6 @@ void setOutputRobot()
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
     //Performs a Bitwise AND operation on each individual bit of the 4-bit robot instruction number
-    //Left shift operation (<<) shifts the binary value each loop iteration: 1(0001), 2(0010), 4(0100), 8(1000)
-    //i.e. (14 & (1<<3)) == (1<<3) expressed in binary is (1110 & 1000) == (1000)
-    //Sets the respective stateBit based on the state of the bit checked
     robotWindow.stateBit[i] = (robotWindow.instruct & (1<<i)) == (1<<i) ? HIGH : LOW;
   }
 }
