@@ -9,6 +9,26 @@ enum MotorInstruction
   moveCCW = 2
 };
 
+enum RobotInstruction
+{
+  fault = 0,
+  task1 = 1,
+  task2pos1 = 2,
+  task2pos2 = 3,
+  task3 = 4,
+  NULL5 = 5,
+  task2pos3 = 6,
+  NULL7 = 7,
+  holding = 8,
+  tool1 = 9,
+  tool2 = 10,
+  NULL11 = 11,
+  tool3 = 12,
+  NULL13 = 13,
+  NULL14 = 14,
+  home = 15,
+};
+
 struct Sensor 
 {
   int pin;
@@ -32,8 +52,10 @@ struct Motor
 const int NUM_ROBOT_BITS = 4;
 struct Robot
 {
-  int pinBit[NUM_ROBOT_BITS];
-  int stateBit[NUM_ROBOT_BITS]; 
+  int inputPinBit[NUM_ROBOT_BITS];
+  int outputPinBit[NUM_ROBOT_BITS];
+  int inputStateBit[NUM_ROBOT_BITS]; 
+  int outputStateBit[NUM_ROBOT_BITS];
   int instruct;
 };
 
@@ -43,6 +65,7 @@ Sensor sensorSqueegee = {.pin = 3, .state = HIGH};
 Sensor sensorCloth = {.pin = 4, .state = HIGH};
 Sensor sensorPosMin = {.pin = 5, .state = LOW};
 Sensor sensorPosMax = {.pin = 6, .state = LOW};
+Sensor sensorInfrared {.pin = 7, .state = LOW};
 
 //Initialize motor object
 Motor motorWindow = {.pin2A = 7, .pin1A = 8, .pinEN = 9, .speed = 0, .direction = 1, .instruct = 0};
@@ -58,10 +81,10 @@ const unsigned long ROBOT_INSTRUCT_DELAY = 200;
 //////
 
 //Initialize robot object
-Robot robotWindow = {.pinBit = {10, 11, 12, 13}, .stateBit = {LOW}, .instruct = 0};
+Robot robotWindow = {.inputPinBit = {10, 11, 12, 13}, .outputPinBit = {14, 15, 16, 17}, .inputStateBit = {LOW}, .outputStateBit = {LOW}, .instruct = 0};
 
-//Store sensor input data
-void readInputSensor();
+//Store input data
+void readInput();
 //Converts LOWs to HIGHs and HIGHs to LOWs
 //Used to set active sensor state output as HIGH, ad inactive sensor state output as LOW
 //because the sensor output is reversed
@@ -83,26 +106,40 @@ void setup() {
   pinMode(sensorCloth.pin, INPUT);
   pinMode(sensorPosMin.pin, INPUT);
   pinMode(sensorPosMax.pin, INPUT);
+  pinMode(sensorInfrared.pin, INPUT);
   pinMode(motorWindow.pin2A, OUTPUT);
   pinMode(motorWindow.pin1A, OUTPUT);
   pinMode(motorWindow.pinEN, OUTPUT);
+
+  for (int i = 0; i < NUM_ROBOT_BITS; i++)
+  {
+    pinMode(robotWindow.inputPinBit[i], INPUT);
+    pinMode(robotWindow.outputPinBit[i], OUTPUT);
+  }
 }
 
 void loop() {
-  readInputSensor();
+  readInput();
   setOutputMotor();
   sendOutputMotor();
   setOutputRobot();
   sendOutputRobot();
 }
 
-void readInputSensor()
+void readInput()
 {
   sensorSprayer.state = convertDigitalInput(sensorSprayer);
   sensorSqueegee.state = convertDigitalInput(sensorSqueegee);
   sensorCloth.state = convertDigitalInput(sensorCloth);
   sensorPosMin.state = convertDigitalInput(sensorPosMin);
   sensorPosMax.state = convertDigitalInput(sensorPosMax);
+
+  sensorInfrared.state = digitalRead(sensorInfrared.pin);
+  
+  for (int i = 0; i < NUM_ROBOT_BITS; i++)
+  {
+    robotWindow.inputStateBit[i] = digitalRead(robotWindow.inputPinBit[i]);
+  }
 }
 
 int convertDigitalInput(Sensor sensorObject)
@@ -167,7 +204,7 @@ void setOutputRobot()
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
     //Performs a Bitwise AND operation on each individual bit of the 4-bit robot instruction number
-    robotWindow.stateBit[i] = (robotWindow.instruct & (1<<i)) == (1<<i) ? HIGH : LOW;
+    robotWindow.outputStateBit[i] = (robotWindow.instruct & (1<<i)) == (1<<i) ? HIGH : LOW;
   }
 }
 
@@ -201,6 +238,6 @@ void sendOutputRobot()
 {
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
-    digitalWrite(robotWindow.pinBit[i], robotWindow.stateBit[i]);
+    digitalWrite(robotWindow.outputPinBit[i], robotWindow.outputStateBit[i]);
   }
 }
