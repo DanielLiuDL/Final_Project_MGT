@@ -11,11 +11,31 @@ NOTES:
 - Don't use the serial communication pins (RX/TX), pin 0 and 1
 - The proximity sensors used have a normally HIGH logic level (i.e. when it senses something it goes LOW), 
   for the sake of simplfying logic the state of these sensors are inverted via convertDigitalInput()
-
 - Each used pin has a corresponding register for use in CODESYS, but it
   doesn't necessarily need to be used in the CODESYS program, it's just designed that way for convenience
 */
 
+/*
+CODESYS INTEGRATION:
+- This video goes through the process 
+  https://www.youtube.com/watch?v=UpzWkuqIYgE
+- The terms Master-Slave also refers to the terms Client-Server
+- MAKE SURE:
+  - COM port is correct
+  - Baud rate is correct
+  - Parity is set to none
+  - 8 data bits, 1 stop bit
+- SETTING UP REGISTERS:
+  - Match the channel bit number of CODESYS variables with the registerNum of the Arduino variables
+  - Digital input:  Read Discrete Inputs
+                    Length 10
+  - Digital output: Write Coils
+                    Length 8
+  - Analog input:   Read Input Register
+                    Length n/a
+  - Analog ouput:   Write Single Register
+                    Length 1
+*/
 #include <ModbusSerial.h>
 
 const unsigned long BAUD = 115200; //Baud rate
@@ -139,11 +159,10 @@ Robot robotWindow =
 
 //Const speed for motor operation
 const int MOTOR_RUN_SPEED = 255;
-
-//////THESE ARE FOR TESTING
+//For tracking motor delay
 unsigned long motorMillis = 0;
 const unsigned long MOTOR_DELAY = 700;
-//////
+
 
 //Sets up pins and registers
 void setupConnection(Connection c);
