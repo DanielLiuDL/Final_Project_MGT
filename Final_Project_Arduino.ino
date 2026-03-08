@@ -9,8 +9,11 @@ NOTES:
   - Modbus-Arduino (NOT ArduinoModbus or Modbus)
   - Modbus-Serial 
 - Don't use the serial communication pins (RX/TX), pin 0 and 1
-- The proximity sensors used have a normally HIGH logic level, for the sake of simplfying logic
-  the state of these sensors are inverted via convertDigitalInput()
+- The proximity sensors used have a normally HIGH logic level (i.e. when it senses something it goes LOW), 
+  for the sake of simplfying logic the state of these sensors are inverted via convertDigitalInput()
+
+- Each used pin has a corresponding register for use in CODESYS, but it
+  doesn't necessarily need to be used in the CODESYS program, it's just designed that way for convenience
 */
 
 #include <ModbusSerial.h>
@@ -51,7 +54,7 @@ enum RobotInstruction
   home = 15,
 };
 
-//Holds information for communication between CODESYS, Arduino IDE, and Arduino board
+//Holds pin information for CODESYS to access inputs and send outputs from/to specified pins
 struct Connection
 {
   int pin; 
@@ -60,6 +63,13 @@ struct Connection
   int registerNum; 
   //Corresponds to the channel that map data is to be entered in CODESYS
   RegisterType registerType;
+};
+
+//Holds digital outputs (coils) from CODESYS
+struct Status
+{
+  bool state;
+  int registerNum;
 };
 
 struct Sensor 
@@ -74,8 +84,10 @@ struct Motor
   Connection con2A;
   Connection con1A;
   Connection conEN;
+  //direction.state = true is CW, = false is CCW
+  Status staDirection;
+  Status staEnergize;
   int speed; //Motor speed value between 0-255
-  int direction; //direction = 1 is CW, direction = -1 is CCW
 };
 
 const int NUM_ROBOT_BITS = 4;
@@ -101,8 +113,10 @@ Motor motorWindow =
 {
 .con2A = {.pin = 8, .registerNum = 0, .registerType = RegisterType::coil}, 
 .con1A = {.pin = 9, .registerNum = 1, .registerType = RegisterType::coil}, 
-.conEN = {.pin = 10, .registerNum = 0, .registerType = RegisterType::hreg}, 
-.speed = 0, .direction = 1
+.conEN = {.pin = 10, .registerNum = 0, .registerType = RegisterType::hreg},
+.staDirection = {.state = true, .registerNum = 6}, //Coil
+.staEnergize = {.state = false, .registerNum = 7}, //Coil
+.speed = 0
 };
 
 //Initialize robot object
@@ -162,6 +176,12 @@ void setup() {
     setupConnection(robotWindow.inputConBit[i]);
     setupConnection(robotWindow.outputConBit[i]);
   }
+
+  //Sets up registers for Status objects
+  mb.addCoil(motorWindow.staDirection.registerNum);
+  mb.addCoil(motorWindow.staEnergize.registerNum);
+
+  motorMillis = millis();
 }
 
 void loop() {
@@ -241,7 +261,41 @@ void sendOutputRobot()
 
 void sendOutputMotor()
 {
-  analogWrite(motorWindow.conEN.pin, mb.Hreg(motorWindow.conEN.registerNum));
-  digitalWrite(motorWindow.con2A.pin, mb.Coil(motorWindow.con2A.registerNum));
-  digitalWrite(motorWindow.con1A.pin, mb.Coil(motorWindow.con1A.registerNum));
+  //Update the motor's Status objects
+  motorWindow.staEnergize.state = mb.Coil(motorWindow.staEnergize.registerNum);
+
+  bool prevDirection = motorWindow.staDirection.state;
+  motorWindow.staDirection.state = mb.Coil(motorWindow.staDirection.registerNum);
+  //Delay motor's operation when it changes directions
+  if (motorWindow.staDirection.state != prevDirection)
+  {
+    motorMillis = millis();
+  } 
+
+  if (motorWindow.staEnergize.state == true && millis() - motorMillis > MOTOR_DELAY)
+  {
+    analogWrite(motorWindow.conEN.pin, MOTOR_RUN_SPEED);
+    //CW
+    if (motorWindow.staDirection.state == true)
+    {
+      digitalWrite(motorWindow.con2A.pin, true);
+      digitalWrite(motorWindow.con1A.pin, false);
+    }
+    //CCW
+    else
+    {
+      digitalWrite(motorWindow.con2A.pin, false);
+      digitalWrite(motorWindow.con1A.pin, true);
+    }
+  }
+  else
+  {
+    analogWrite(motorWindow.conEN.pin, 0);
+    digitalWrite(motorWindow.con2A.pin, false);
+    digitalWrite(motorWindow.con1A.pin, false);
+  }
+
+  // analogWrite(motorWindow.conEN.pin, mb.Hreg(motorWindow.conEN.registerNum));
+  // digitalWrite(motorWindow.con2A.pin, mb.Coil(motorWindow.con2A.registerNum));
+  // digitalWrite(motorWindow.con1A.pin, mb.Coil(motorWindow.con1A.registerNum));
 }
