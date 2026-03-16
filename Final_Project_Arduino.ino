@@ -21,7 +21,7 @@ CODESYS INTEGRATION:
   https://www.youtube.com/watch?v=UpzWkuqIYgE
 - The terms Master-Slave also refers to the terms Client-Server
 - MAKE SURE:
-  - COM port is correct
+  - COM port is correct (Matches the COM port used in Arduino program under "Tools")
   - Baud rate is correct
   - Parity is set to none
   - 8 data bits, 1 stop bit
@@ -54,6 +54,8 @@ enum class RegisterType //Determines type of register for each pin
   coil  //Digital output
 };
 
+//These are here for reference
+//They might not be needed in the Arduino program itself
 enum RobotInstruction
 {
   fault = 0,
@@ -133,7 +135,7 @@ Motor motorWindow =
 {
 .con2A = {.pin = 8, .registerNum = 0, .registerType = RegisterType::coil}, 
 .con1A = {.pin = 9, .registerNum = 1, .registerType = RegisterType::coil}, 
-.conEN = {.pin = 10, .registerNum = 0, .registerType = RegisterType::hreg},
+.conEN = {.pin = 10, .registerNum = 0, .registerType = RegisterType::hreg}, //Connect to PWM pin
 .staDirection = {.state = true, .registerNum = 6}, //Coil
 .staEnergize = {.state = false, .registerNum = 7}, //Coil
 .speed = 0
@@ -143,16 +145,16 @@ Motor motorWindow =
 Robot robotWindow = 
 {
 .inputConBit = {
-  {.pin = 11, .registerNum = 6, .registerType = RegisterType::ists},
-  {.pin = 12, .registerNum = 7, .registerType = RegisterType::ists},
-  {.pin = 13, .registerNum = 8, .registerType = RegisterType::ists},
-  {.pin = 14, .registerNum = 9, .registerType = RegisterType::ists}
+  {.pin = 23, .registerNum = 6, .registerType = RegisterType::ists},
+  {.pin = 25, .registerNum = 7, .registerType = RegisterType::ists},
+  {.pin = 27, .registerNum = 8, .registerType = RegisterType::ists},
+  {.pin = 29, .registerNum = 9, .registerType = RegisterType::ists}
   }, 
 .outputConBit = {
-  {.pin = 15, .registerNum = 2, .registerType = RegisterType::coil},
-  {.pin = 16, .registerNum = 3, .registerType = RegisterType::coil},
-  {.pin = 17, .registerNum = 4, .registerType = RegisterType::coil},
-  {.pin = 18, .registerNum = 5, .registerType = RegisterType::coil}
+  {.pin = 22, .registerNum = 2, .registerType = RegisterType::coil},
+  {.pin = 24, .registerNum = 3, .registerType = RegisterType::coil},
+  {.pin = 26, .registerNum = 4, .registerType = RegisterType::coil},
+  {.pin = 28, .registerNum = 5, .registerType = RegisterType::coil}
   }, 
 .inputStateBit = {LOW}, .outputStateBit = {LOW}, .instruct = 0
 };
@@ -162,7 +164,6 @@ const int MOTOR_RUN_SPEED = 255;
 //For tracking motor delay
 unsigned long motorMillis = 0;
 const unsigned long MOTOR_DELAY = 700;
-
 
 //Sets up pins and registers
 void setupConnection(Connection c);
@@ -272,6 +273,7 @@ void sendOutputRobot()
   robotWindow.instruct = 0;
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
+    //Update the output sent to the robot from CODESYS
     robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
     robotWindow.instruct = robotWindow.outputStateBit[i] == true ? robotWindow.instruct + (1<<i) : robotWindow.instruct;
@@ -280,7 +282,7 @@ void sendOutputRobot()
 
 void sendOutputMotor()
 {
-  //Update the motor's Status objects
+  //Update the motor's Status objects from CODESYS
   motorWindow.staEnergize.state = mb.Coil(motorWindow.staEnergize.registerNum);
 
   bool prevDirection = motorWindow.staDirection.state;
@@ -291,6 +293,7 @@ void sendOutputMotor()
     motorMillis = millis();
   } 
 
+  //Operates if in the energized state and not currently delayed
   if (motorWindow.staEnergize.state == true && millis() - motorMillis > MOTOR_DELAY)
   {
     analogWrite(motorWindow.conEN.pin, MOTOR_RUN_SPEED);
