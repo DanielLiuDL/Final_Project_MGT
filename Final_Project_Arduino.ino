@@ -13,6 +13,8 @@ NOTES:
   for the sake of simplfying logic the state of these sensors are inverted via convertDigitalInput()
 - Each used pin has a corresponding register for use in CODESYS, but it
   doesn't necessarily need to be used in the CODESYS program, it's just designed that way for convenience
+  - UNUSED REGISTERS
+    - con2A, con1A, conEN in favor of controlling them via staDirection, staEnergize
 */
 
 /*
@@ -29,7 +31,7 @@ CODESYS INTEGRATION:
   - Match the channel bit number of CODESYS variables with the registerNum of the Arduino variables
   - Digital input:  Read Discrete Inputs
                     Length 10
-  - Digital output: Write Coils
+  - Digital output: Write Multiple Coils
                     Length 8
   - Analog input:   Read Input Register
                     Length n/a
