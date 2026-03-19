@@ -161,8 +161,8 @@ Robot robotWindow =
 .inputStateBit = {LOW}, .outputStateBit = {LOW}, .instruct = 0
 };
 
-//Const speed for motor operation
-const int MOTOR_RUN_SPEED = 255;
+//Const speed for motor operation (Range 0-255)
+const int MOTOR_RUN_SPEED = 10;
 //For tracking motor delay
 unsigned long motorMillis = 0;
 const unsigned long MOTOR_DELAY = 700;
@@ -278,9 +278,27 @@ void sendOutputRobot()
     //Update the output sent to the robot from CODESYS
     robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+    //Updates the instruction binary value to current one
     robotWindow.instruct = robotWindow.outputStateBit[i] == true ? robotWindow.instruct + (1<<i) : robotWindow.instruct;
   }
 }
+
+/*
+This is another version of sendOutputRobot() to test Arduino to Robot Arm communication
+Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K + C to comment it all
+*/
+
+// void sendOutputRobot()
+// {
+//   //Edit the value depending on the instruction number you want to test
+//   robotWindow.instruct = 0;
+//   for (int i = 0; i < NUM_ROBOT_BITS; i++)
+//   {
+//     //Performs a bitwise AND with the instruction num and bit number i determine if that bit is HIGH or LOW
+//     robotWindow.outputStateBit[i] = (robotWindow.instruct & (1<<i)) == (1<<i) ? HIGH : LOW;
+//     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+//   }
+// }
 
 void sendOutputMotor()
 {
@@ -318,8 +336,4 @@ void sendOutputMotor()
     digitalWrite(motorWindow.con2A.pin, false);
     digitalWrite(motorWindow.con1A.pin, false);
   }
-
-  // analogWrite(motorWindow.conEN.pin, mb.Hreg(motorWindow.conEN.registerNum));
-  // digitalWrite(motorWindow.con2A.pin, mb.Coil(motorWindow.con2A.registerNum));
-  // digitalWrite(motorWindow.con1A.pin, mb.Coil(motorWindow.con1A.registerNum));
 }
