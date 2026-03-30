@@ -9,7 +9,7 @@ NOTES:
   - Modbus-Arduino (NOT ArduinoModbus or Modbus)
   - Modbus-Serial 
 - Don't use the serial communication pins (RX/TX), pin 0 and 1
-- The proximity sensors used have a normally HIGH logic level (i.e. when it senses something it goes LOW), 
+- The IR sensors used have a normally HIGH logic level (i.e. when it senses something it goes active LOW), 
   for the sake of simplfying logic the state of these sensors are inverted via convertDigitalInput()
 - Each used pin has a corresponding register for use in CODESYS, but it
   doesn't necessarily need to be used in the CODESYS program, it's just designed that way for convenience
@@ -27,6 +27,7 @@ CODESYS INTEGRATION:
   - Baud rate is correct
   - Parity is set to none
   - 8 data bits, 1 stop bit
+  - Server address in Modbus Server matches ID in Arduino code
 - SETTING UP REGISTERS:
   - Match the channel bit number of CODESYS variables with the registerNum of the Arduino variables
   - Digital input:  Read Discrete Inputs
@@ -56,27 +57,28 @@ enum class RegisterType //Determines type of register for each pin
   coil  //Digital output
 };
 
-//These are here for reference
-//They might not be needed in the Arduino program itself
-enum RobotInstruction
-{
-  fault = 0,
-  task1 = 1,
-  task2pos1 = 2,
-  task2pos2 = 3,
-  task3 = 4,
-  NULL5 = 5,
-  task2pos3 = 6,
-  NULL7 = 7,
-  holding = 8,
-  tool1 = 9,
-  tool2 = 10,
-  NULL11 = 11,
-  tool3 = 12,
-  NULL13 = 13,
-  NULL14 = 14,
-  home = 15,
-};
+/*
+These robot instructions are here for reference for testing purposes and clarification
+*/
+// enum RobotInstruction
+// {
+//   fault = 0,
+//   task1 = 1,
+//   task2pos1 = 2,
+//   task2pos2 = 3,
+//   task3 = 4,
+//   NULL5 = 5,
+//   task2pos3 = 6,
+//   NULL7 = 7,
+//   holding = 8,
+//   tool1 = 9,
+//   tool2 = 10,
+//   NULL11 = 11,
+//   tool3 = 12,
+//   NULL13 = 13,
+//   NULL14 = 14,
+//   home = 15,
+// };
 
 //Holds pin information for CODESYS to access inputs and send outputs from/to specified pins
 struct Connection
@@ -121,7 +123,6 @@ struct Robot
   Connection outputConBit[NUM_ROBOT_BITS];
   int inputStateBit[NUM_ROBOT_BITS]; 
   int outputStateBit[NUM_ROBOT_BITS];
-  int instruct;
 };
 
 //Initalize sensor objects
@@ -158,7 +159,7 @@ Robot robotWindow =
   {.pin = 26, .registerNum = 4, .registerType = RegisterType::coil},
   {.pin = 28, .registerNum = 5, .registerType = RegisterType::coil}
   }, 
-.inputStateBit = {LOW}, .outputStateBit = {LOW}, .instruct = 0
+.inputStateBit = {LOW}, .outputStateBit = {LOW}
 };
 
 //Const speed for motor operation (Range 0-255)
@@ -171,7 +172,7 @@ const unsigned long MOTOR_DELAY = 700;
 void setupConnection(Connection c);
 //Store input data
 void readDigitalInput();
-//Converts LOWs to HIGHs and HIGHs to LOWs, for the proximity sensor
+//Converts LOWs to HIGHs and HIGHs to LOWs, for the IR sensor
 int convertDigitalInput(Sensor sensorObject);
 //Send state of motor's motion
 void sendOutputMotor();
@@ -247,7 +248,18 @@ void readDigitalInput()
   sensorCloth.state = convertDigitalInput(sensorCloth);
   sensorPosMin.state = convertDigitalInput(sensorPosMin);
   sensorPosMax.state = convertDigitalInput(sensorPosMax);
+
   sensorInfrared.state = digitalRead(sensorInfrared.con.pin);
+
+/*
+Code for testing without the IR sensors due to their normally HIGH output.
+Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K + C to comment it all
+*/
+  // sensorSprayer.state = digitalRead(sensorSprayer.con.pin);
+  // sensorSqueegee.state = digitalRead(sensorSqueegee.con.pin);
+  // sensorCloth.state = digitalRead(sensorCloth.con.pin);
+  // sensorPosMin.state = digitalRead(sensorPosMin.con.pin);
+  // sensorPosMax.state = digitalRead(sensorPosMax.con.pin);
 
   //Sets states of the digital inputs registers for CODESYS
   mb.Ists(sensorSprayer.con.registerNum, sensorSprayer.state);
@@ -272,14 +284,11 @@ int convertDigitalInput(Sensor sensorObject)
 
 void sendOutputRobot()
 {
-  robotWindow.instruct = 0;
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
     //Update the output sent to the robot from CODESYS
     robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
-    //Updates the instruction binary value to current one
-    robotWindow.instruct = robotWindow.outputStateBit[i] == true ? robotWindow.instruct + (1<<i) : robotWindow.instruct;
   }
 }
 
@@ -287,15 +296,14 @@ void sendOutputRobot()
 This is another version of sendOutputRobot() to test Arduino to Robot Arm communication
 Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K + C to comment it all
 */
-
 // void sendOutputRobot()
 // {
 //   //Edit the value depending on the instruction number you want to test
-//   robotWindow.instruct = 0;
+//   robotInstruction = 0;
 //   for (int i = 0; i < NUM_ROBOT_BITS; i++)
 //   {
 //     //Performs a bitwise AND with the instruction num and bit number i determine if that bit is HIGH or LOW
-//     robotWindow.outputStateBit[i] = (robotWindow.instruct & (1<<i)) == (1<<i) ? HIGH : LOW;
+//     robotWindow.outputStateBit[i] = (robotInstruction & (1<<i)) == (1<<i) ? HIGH : LOW;
 //     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
 //   }
 // }
