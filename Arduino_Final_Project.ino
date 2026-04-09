@@ -17,7 +17,9 @@ NOTES:
     - con2A, con1A, conEN in favor of controlling them via staMotorCW, staMotorCCW
 
 - sensorInfrared is unused in our final iteration of our project, 
-  it was meant to determine if the system was enclosed for safety purposes
+  it was meant to determine if the system was enclosed for safety purposes.
+- The NO contact of the relay for outputStateBit[2] is stuck, so the NC contact is used,
+  and the state of the output is inverted.
 */
 
 /*
@@ -166,7 +168,7 @@ Robot robotWindow =
 };
 
 //Const speed for motor operation (Range 0-255)
-const int MOTOR_RUN_SPEED = 10;
+const int MOTOR_RUN_SPEED = 255;
 //For tracking motor delay
 unsigned long motorMillis = 0;
 const unsigned long MOTOR_DELAY = 700;
@@ -290,8 +292,22 @@ void sendOutputRobot()
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
     //Update the output sent to the robot from CODESYS
-    robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
-    digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+    
+    // robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
+    // digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+
+    //The NO contact of the relay for outputStateBit[2] is stuck, so the NC contact is used,
+    //and the state of the output is inverted.
+    if (i == 2)
+    {
+      robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum) == HIGH ? LOW : HIGH;
+      digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+    }
+    else
+    {
+      robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
+      digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
+    }
   }
 }
 
