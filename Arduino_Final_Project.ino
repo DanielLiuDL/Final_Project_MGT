@@ -136,7 +136,7 @@ Sensor sensorSqueegee = {.con = {.pin = 3, .registerNum = 1, .registerType = Reg
 Sensor sensorCloth =    {.con = {.pin = 4, .registerNum = 2, .registerType = RegisterType::ists}, .state = HIGH};
 Sensor sensorPosMin =   {.con = {.pin = 5, .registerNum = 3, .registerType = RegisterType::ists}, .state = LOW};
 Sensor sensorPosMax =   {.con = {.pin = 6, .registerNum = 4, .registerType = RegisterType::ists}, .state = LOW};
-//Sensor sensorInfrared = {.con = {.pin = 7, .registerNum = 5, .registerType = RegisterType::ists}, .state = LOW};
+Sensor sensorInfrared = {.con = {.pin = 7, .registerNum = 5, .registerType = RegisterType::ists}, .state = LOW};
 
 //Initialize motor object
 Motor motorWindow = 
@@ -195,7 +195,7 @@ void setup() {
   setupConnection(sensorCloth.con);
   setupConnection(sensorPosMin.con);
   setupConnection(sensorPosMax.con);
-  //setupConnection(sensorInfrared.con);
+  setupConnection(sensorInfrared.con);
   setupConnection(motorWindow.con2A);
   setupConnection(motorWindow.con1A);
   setupConnection(motorWindow.conEN);
@@ -254,7 +254,7 @@ void readDigitalInput()
   sensorPosMin.state = convertDigitalInput(sensorPosMin);
   sensorPosMax.state = convertDigitalInput(sensorPosMax);
 
-  //sensorInfrared.state = digitalRead(sensorInfrared.con.pin);
+  sensorInfrared.state = digitalRead(sensorInfrared.con.pin);
 
 /*
 Code for testing without the IR sensors due to their normally HIGH output.
@@ -272,7 +272,7 @@ Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K
   mb.Ists(sensorCloth.con.registerNum, sensorCloth.state);
   mb.Ists(sensorPosMin.con.registerNum, sensorPosMin.state);
   mb.Ists(sensorPosMax.con.registerNum, sensorPosMax.state);
-  //mb.Ists(sensorInfrared.con.registerNum, sensorInfrared.state);
+  mb.Ists(sensorInfrared.con.registerNum, sensorInfrared.state);
 
   for (int i = 0; i < NUM_ROBOT_BITS; i++)
   {
