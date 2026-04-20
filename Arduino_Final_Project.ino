@@ -18,8 +18,6 @@ NOTES:
 
 - sensorInfrared is unused in our final iteration of our project, 
   it was meant to determine if the system was enclosed for safety purposes.
-- The NO contact of the relay for outputStateBit[2] is stuck, so the NC contact is used,
-  and the state of the output is inverted.
 */
 
 /*
@@ -61,29 +59,6 @@ enum class RegisterType //Determines type of register for each pin
   ists, //Digital input
   coil  //Digital output
 };
-
-/*
-These robot instructions are here for reference for testing purposes and clarification
-*/
-// enum RobotInstruction
-// {
-//   fault = 0,
-//   task1 = 1,
-//   task2pos1 = 2,
-//   task2pos2 = 3,
-//   task3 = 4,
-//   NULL5 = 5,
-//   task2pos3 = 6,
-//   NULL7 = 7,
-//   holding = 8,
-//   tool1 = 9,
-//   tool2 = 10,
-//   NULL11 = 11,
-//   tool3 = 12,
-//   NULL13 = 13,
-//   NULL14 = 14,
-//   home = 15,
-// };
 
 //Holds pin information for CODESYS to access inputs and send outputs from/to specified pins
 struct Connection
@@ -256,16 +231,6 @@ void readDigitalInput()
 
   sensorInfrared.state = digitalRead(sensorInfrared.con.pin);
 
-/*
-Code for testing without the IR sensors due to their normally HIGH output.
-Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K + C to comment it all
-*/
-  // sensorSprayer.state = digitalRead(sensorSprayer.con.pin);
-  // sensorSqueegee.state = digitalRead(sensorSqueegee.con.pin);
-  // sensorCloth.state = digitalRead(sensorCloth.con.pin);
-  // sensorPosMin.state = digitalRead(sensorPosMin.con.pin);
-  // sensorPosMax.state = digitalRead(sensorPosMax.con.pin);
-
   //Sets states of the digital inputs registers for CODESYS
   mb.Ists(sensorSprayer.con.registerNum, sensorSprayer.state);
   mb.Ists(sensorSqueegee.con.registerNum, sensorSqueegee.state);
@@ -293,39 +258,10 @@ void sendOutputRobot()
   {
     //Update the output sent to the robot from CODESYS
     
-    // robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
-    // digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
-
-    //The NO contact of the relay for outputStateBit[2] is stuck, so the NC contact is used,
-    //and the state of the output is inverted.
-    if (i == 2)
-    {
-      robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum) == HIGH ? LOW : HIGH;
-      digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
-    }
-    else
-    {
-      robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
-      digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
-    }
+    robotWindow.outputStateBit[i] = mb.Coil(robotWindow.outputConBit[i].registerNum);
+    digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
   }
 }
-
-/*
-This is another version of sendOutputRobot() to test Arduino to Robot Arm communication
-Highlight the entire function and use CTRL + K + U to uncomment it all, CTRL + K + C to comment it all
-*/
-// void sendOutputRobot()
-// {
-//   //Edit the value depending on the instruction number you want to test
-//   robotInstruction = 0;
-//   for (int i = 0; i < NUM_ROBOT_BITS; i++)
-//   {
-//     //Performs a bitwise AND with the instruction num and bit number i determine if that bit is HIGH or LOW
-//     robotWindow.outputStateBit[i] = (robotInstruction & (1<<i)) == (1<<i) ? HIGH : LOW;
-//     digitalWrite(robotWindow.outputConBit[i].pin, robotWindow.outputStateBit[i]);
-//   }
-// }
 
 void sendOutputMotor()
 {
